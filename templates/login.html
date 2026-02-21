@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Automation Workforce Reporting System</title>
+<style>
+/* Reset & body */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #e0f0ff, #f4f7f8);
+}
+
+/* Header / System Name */
+header {
+    text-align: center;
+    padding: 40px 20px 10px 20px;
+    background: #007BFF;
+    color: white;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+}
+header h1 {
+    margin: 0;
+    font-size: 2em;
+}
+header p {
+    margin: 5px 0 0 0;
+    font-size: 1em;
+}
+
+/* About Section */
+.about {
+    text-align: center;
+    margin: 20px auto;
+    max-width: 800px;
+    font-size: 1.1em;
+    color: #333;
+}
+
+/* Login card */
+.login-card {
+    background: white;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    width: 350px;
+    text-align: center;
+    margin: 40px auto;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.login-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+}
+.login-card h2 { margin-bottom: 20px; color: #007BFF; }
+.login-card input {
+    width: 80%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+.login-card select {
+    width: 85%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+.login-card button {
+    padding: 10px 20px;
+    background: #007BFF;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.login-card button:hover { background: #0056b3; }
+.error { color: red; margin-bottom: 10px; }
+
+/* Contact & social media */
+.contact {
+    text-align: center;
+    margin: 30px 0;
+    font-size: 0.95em;
+}
+.social-icons img {
+    width: 30px;
+    margin: 0 10px;
+    vertical-align: middle;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.social-icons img:hover {
+    transform: scale(1.2);
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 15px;
+    background: #007BFF;
+    color: white;
+    margin-top: 40px;
+    box-shadow: 0 -5px 10px rgba(0,0,0,0.1);
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>Automation Workforce Reporting System</h1>
+    <p>Monitor, analyze, and optimize call center performance efficiently</p>
+</header>
+
+<div class="about">
+    <p>Welcome to the Automation Workforce Reporting System! This platform allows analysts to upload call logs and generate insightful reports, including AHT tracking, dispositions, disconnections, and call trends. Supervisors can manage analysts and view uploaded reports in real-time.</p>
+</div>
+
+<div class="login-card">
+    <h2>Login</h2>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <form method="post" action="/login">
+        <input type="email" name="email" placeholder="Email" required><br>
+        <input type="password" name="password" placeholder="Password" required><br>
+        <select name="role" required>
+            <option value="analyst">Analyst</option>
+            <option value="supervisor">Supervisor</option>
+        </select><br><br>
+        <button type="submit">Login</button>
+    </form>
+</div>
+
+<div class="contact">
+    <p>Contact us: info@example.com | +27 71 887 8749</p>
+    <div class="social-icons">
+        <a href="#"><img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" alt="Facebook"></a>
+        <a href="#"><img src="https://cdn-icons-png.flaticon.com/512/733/733561.png" alt="Twitter"></a>
+        <a href="#"><img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="LinkedIn"></a>
+        <a href="#"><img src="https://cdn-icons-png.flaticon.com/512/1384/1384063.png" alt="Instagram"></a>
+    </div>
+</div>
+
+<footer>
+    &copy; 2026 Automation Workforce Reporting System. All rights reserved.
+</footer>
+
+</body>
+</html>

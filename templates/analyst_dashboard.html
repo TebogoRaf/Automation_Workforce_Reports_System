@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Analyst Dashboard</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f7f8;
+    margin: 0;
+    padding: 0;
+}
+h1 {
+    text-align: center;
+    color: #333;
+    margin: 20px 0;
+}
+/* Upload form styling */
+.upload-container {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.upload-container input[type="file"] {
+    padding: 8px;
+    margin-right: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+.upload-container button {
+    padding: 8px 15px;
+    background: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+.upload-container button:hover {
+    background: #0056b3;
+}
+
+/* Dashboard cards */
+.card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 900px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px rgba(0,0,0,0.2);
+}
+.card h2 {
+    margin-top: 0;
+    color: #007BFF;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background: #fff;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+th, td {
+    padding: 12px;
+    text-align: center;
+}
+th {
+    background: #007BFF;
+    color: white;
+}
+tr:nth-child(even) {
+    background: #f4f7f8;
+}
+tr:hover {
+    background: #e0f0ff;
+}
+/* Total row */
+.total-row {
+    font-weight: bold;
+    background: #ffd966;
+}
+
+/* Graph images */
+.card img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+</style>
+</head>
+<body>
+<h1>Welcome {{ session.name }}</h1>
+
+<!-- ---------------- UPLOAD FORM ---------------- -->
+<div class="upload-container">
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".xlsx,.xls" required>
+        <button type="submit">Upload Excel</button>
+    </form>
+</div>
+
+<!-- ---------------- RESULTS ---------------- -->
+{% if dispositions %}
+
+<!-- Call Trends Table -->
+<div class="card">
+    <h2>Call Trends (per day)</h2>
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>Number of Calls</th>
+        </tr>
+        {% for row in trends %}
+        <tr>
+            <td>{{ row.date }}</td>
+            <td>{{ row.calls }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="total-row">
+            <td>Total</td>
+            <td>{{ total_calls }}</td>
+        </tr>
+    </table>
+    {% if call_trends_chart %}
+    <img src="data:image/png;base64,{{ call_trends_chart }}" alt="Call Trends Chart">
+    {% endif %}
+</div>
+
+<!-- AHT Tracking -->
+<div class="card">
+    <h2>AHT Tracking</h2>
+    <table>
+        <tr>
+            {% for col in aht[0].keys() %}
+            <th>{{ col }}</th>
+            {% endfor %}
+        </tr>
+        {% for row in aht %}
+        <tr>
+            {% for val in row.values() %}
+            <td>{{ val }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+    {% if aht_chart %}
+    <img src="data:image/png;base64,{{ aht_chart }}" alt="AHT Chart">
+    {% endif %}
+</div>
+
+<!-- Dispositions -->
+<div class="card">
+    <h2>Dispositions</h2>
+    <table>
+        <tr>
+            {% for col in dispositions[0].keys() %}
+            <th>{{ col }}</th>
+            {% endfor %}
+        </tr>
+        {% for row in dispositions %}
+        <tr>
+            {% for val in row.values() %}
+            <td>{{ val }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+    {% if dispositions_chart %}
+    <img src="data:image/png;base64,{{ dispositions_chart }}" alt="Dispositions Chart">
+    {% endif %}
+</div>
+
+<!-- Disconnections -->
+<div class="card">
+    <h2>Disconnections</h2>
+    <table>
+        <tr>
+            {% for col in disconnections[0].keys() %}
+            <th>{{ col }}</th>
+            {% endfor %}
+        </tr>
+        {% for row in disconnections %}
+        <tr>
+            {% for val in row.values() %}
+            <td>{{ val }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+    {% if disconnections_chart %}
+    <img src="data:image/png;base64,{{ disconnections_chart }}" alt="Disconnections Chart">
+    {% endif %}
+</div>
+<!-- LOGOUT BUTTON -->
+<div class="card" style="text-align:center;">
+    <form action="/logout" method="get">
+        <button type="submit" style="background:#dc3545;">Logout</button>
+    </form>
+</div>
+
+{% else %}
+<p style="text-align:center; font-weight:bold;">Upload an Excel file above to see call stats, AHT, dispositions, and disconnections.</p>
+{% endif %}
+</body>
+</html>

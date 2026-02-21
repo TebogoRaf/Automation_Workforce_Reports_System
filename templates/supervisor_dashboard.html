@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Supervisor Dashboard</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f7f8;
+    margin: 0;
+    padding: 0;
+}
+h1 {
+    text-align: center;
+    color: #333;
+    margin: 20px 0;
+}
+
+/* Card styling */
+.card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 900px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px rgba(0,0,0,0.2);
+}
+.card h2 {
+    margin-top: 0;
+    color: #007BFF;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+th, td {
+    padding: 12px;
+    text-align: center;
+}
+th {
+    background: #007BFF;
+    color: white;
+}
+tr:nth-child(even) { background: #f4f7f8; }
+tr:hover { background: #e0f0ff; }
+
+/* Form styling */
+form input, form button {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+form button {
+    background: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+form button:hover { background: #1e7e34; }
+</style>
+</head>
+<body>
+<h1>Supervisor Dashboard</h1>
+
+<!-- ---------------- REPORTS TABLE ---------------- -->
+<div class="card">
+    <h2>Uploaded Reports</h2>
+    {% if reports %}
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Uploaded By</th>
+            <th>Date</th>
+            <th>Excel File</th>
+        </tr>
+        {% for report in reports %}
+        <tr>
+            <td>{{ report[0] }}</td>
+            <td>{{ report[1] }}</td>
+            <td>{{ report[2] }}</td>
+            <td>{{ report[3] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p style="text-align:center; font-weight:bold;">No reports uploaded yet.</p>
+    {% endif %}
+</div>
+
+<!-- ---------------- CREATE ANALYST ---------------- -->
+<div class="card">
+    <h2>Create New Analyst</h2>
+    <form method="post" action="/create_analyst" style="text-align:center;">
+        <input type="text" name="name" placeholder="Name" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Create Analyst</button>
+    </form>
+</div>
+
+<!-- ---------------- LOGOUT BUTTON ---------------- -->
+<div class="card" style="text-align:center;">
+    <form action="/logout" method="get">
+        <button type="submit" style="background:#dc3545;">Logout</button>
+    </form>
+</div>
+
+</body>
+</html>
