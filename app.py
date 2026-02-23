@@ -115,20 +115,6 @@ def forgot_password():
 
     return render_template("forgot_password.html")
 
-        # Generate a temporary password
-        temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-        hashed_temp = bcrypt.hashpw(temp_password.encode(), bcrypt.gensalt()).decode()
-
-        # Update user password in database
-        cur.execute("UPDATE users SET password=%s WHERE email=%s", (hashed_temp, email))
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return render_template("forgot_password.html", success=f"Temporary password: {temp_password}")
-
-    return render_template("forgot_password.html")
-
 # ---------------- ANALYST DASHBOARD ---------------- #
 @app.route("/analyst")
 def analyst_dashboard():
