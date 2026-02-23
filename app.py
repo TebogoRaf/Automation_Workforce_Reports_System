@@ -66,16 +66,54 @@ def logout():
 @app.route("/forgot_password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
-        email = request.form["email"]
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM users WHERE email=%s", (email,))
-        user = cur.fetchone()
+        # Step 1: User enters email
+        if "new_password" not in request.form:
+            email = request.form["email"]
 
-        if not user:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM users WHERE email=%s", (email,))
+            user = cur.fetchone()
             cur.close()
             conn.close()
-            return render_template("forgot_password.html", error="Email not found")
+
+            if not user:
+                return render_template("forgot_password.html", error="Email not found")
+
+            # Generate temporary password
+            temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+
+            return render_template("forgot_password.html",
+                                   step="set_new",
+                                   email=email,
+                                   temp_password=temp_password)
+
+        # Step 2: User sets new password
+        else:
+            email = request.form["email"]
+            temp_password = request.form["temp_password"]
+            new_password = request.form["new_password"]
+            confirm_password = request.form["confirm_password"]
+
+            if new_password != confirm_password:
+                return render_template("forgot_password.html",
+                                       step="set_new",
+                                       email=email,
+                                       temp_password=temp_password,
+                                       error="Passwords do not match")
+
+            hashed_pw = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("UPDATE users SET password=%s WHERE email=%s", (hashed_pw, email))
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            return render_template("forgot_password.html", success="Password updated successfully")
+
+    return render_template("forgot_password.html")
 
         # Generate a temporary password
         temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
