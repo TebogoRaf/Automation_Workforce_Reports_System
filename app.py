@@ -127,89 +127,81 @@ def upload():
     if session.get("role") != "analyst":
         return redirect("/")
 
-    file = request.files["file"]
+    file = request.files.get("file")
+    if not file:
+        return render_template("analyst_dashboard.html", error="No file uploaded")
+
     filepath = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(filepath)
 
-    df = pd.read_excel(filepath)
-    df.columns = df.columns.str.strip().str.lower()
+    try:
+        df = pd.read_excel(filepath)
+        df.columns = df.columns.str.strip().str.lower()
 
-    # Calculations
-    df["aht"] = df["wait"] + df["duration"]
-    dispositions = df.groupby("workstream").size().reset_index(name="count")
-    disconnections = df["disconnection"].value_counts().reset_index()
-    disconnections.columns = ["disconnection", "count"]
-    aht_table = df.groupby("handled by")["aht"].mean().reset_index()
-    trends = df.groupby("date").size().reset_index(name="calls")
+        # --- Column checks ---
+        required_cols = ["wait", "duration", "workstream", "disconnection", "handled by", "date"]
+        missing = [col for col in required_cols if col not in df.columns]
+        if missing:
+            return render_template("analyst_dashboard.html", error=f"Missing columns: {', '.join(missing)}")
 
-    # ---------------- Graphs ---------------- #
-    # Line chart for call trends
-    plt.figure(figsize=(6,4))
-    plt.plot(trends["date"], trends["calls"], marker='o')
-    plt.title("Call Trends")
-    plt.xlabel("Date")
-    plt.ylabel("Number of Calls")
-    plt.tight_layout()
-    buf1 = BytesIO()
-    plt.savefig(buf1, format="png")
-    buf1.seek(0)
-    call_trends_graph = base64.b64encode(buf1.getvalue()).decode('utf-8')
-    plt.close()
+        # --- Calculations ---
+        df["aht"] = df["wait"] + df["duration"]
 
-    # Pie chart for dispositions
-    plt.figure(figsize=(6,6))
-    plt.pie(dispositions["count"], labels=dispositions["workstream"], autopct='%1.1f%%')
-    plt.title("Dispositions")
-    buf2 = BytesIO()
-    plt.savefig(buf2, format="png")
-    buf2.seek(0)
-    dispositions_graph = base64.b64encode(buf2.getvalue()).decode('utf-8')
-    plt.close()
+        aht_table = df.groupby("handled by")["aht"].mean().reset_index()
+        # Convert Timedelta to minutes if needed
+        if pd.api.types.is_timedelta64_dtype(aht_table["aht"]):
+            aht_table["aht"] = aht_table["aht"].dt.total_seconds() / 60
 
-    # Bar chart for AHT
-    plt.figure(figsize=(6,4))
-    plt.bar(aht_table["handled by"], aht_table["aht"], color='skyblue')
-    plt.title("AHT Tracking")
-    plt.xlabel("Agent")
-    plt.ylabel("Average Handle Time")
-    plt.tight_layout()
-    buf3 = BytesIO()
-    plt.savefig(buf3, format="png")
-    buf3.seek(0)
-    aht_graph = base64.b64encode(buf3.getvalue()).decode('utf-8')
-    plt.close()
+        dispositions = df.groupby("workstream").size().reset_index(name="count")
+        disconnections = df["disconnection"].value_counts().reset_index()
+        disconnections.columns = ["disconnection", "count"]
 
-    # Save report in database
-    report_excel_path = os.path.join(UPLOAD_FOLDER, f"report_{file.filename}")
-    with pd.ExcelWriter(report_excel_path) as writer:
-        dispositions.to_excel(writer, sheet_name="Dispositions", index=False)
-        disconnections.to_excel(writer, sheet_name="Disconnections", index=False)
-        aht_table.to_excel(writer, sheet_name="AHT Tracking", index=False)
-        trends.to_excel(writer, sheet_name="Call Trends", index=False)
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        trends = df.groupby("date").size().reset_index(name="calls")
 
-    report_pdf_path = report_excel_path.replace(".xlsx", ".pdf")
-    # Optional: generate PDF if needed
+        total_calls = int(trends["calls"].sum())
+        total_answered = int(df["answered"].sum()) if "answered" in df.columns else 0
+        total_dropped = int(df["dropped"].sum()) if "dropped" in df.columns else 0
 
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO reports (uploaded_by, original_filename, generated_excel, generated_pdf)
-        VALUES (%s,%s,%s,%s)
-    """, (session["user_id"], file.filename, report_excel_path, report_pdf_path))
-    conn.commit()
-    cur.close()
-    conn.close()
+        agent_names = aht_table["handled by"].tolist()
+        agent_totals = aht_table["aht"].round(2).tolist()
 
-    return render_template(
-        "analyst_dashboard.html",
-        dispositions=dispositions.to_dict(orient="records"),
-        disconnections=disconnections.to_dict(orient="records"),
-        aht_table=aht_table.to_dict(orient="records"),
-        trends=trends.to_dict(orient="records"),
-        call_trends_graph=call_trends_graph,
-        dispositions_graph=dispositions_graph,
-        aht_graph=aht_graph
-    )
+        # --- Save report ---
+        report_excel_path = os.path.join(UPLOAD_FOLDER, f"report_{file.filename}")
+        with pd.ExcelWriter(report_excel_path) as writer:
+            dispositions.to_excel(writer, sheet_name="Dispositions", index=False)
+            disconnections.to_excel(writer, sheet_name="Disconnections", index=False)
+            aht_table.to_excel(writer, sheet_name="AHT Tracking", index=False)
+            trends.to_excel(writer, sheet_name="Call Trends", index=False)
+
+        report_pdf_path = report_excel_path.replace(".xlsx", ".pdf")
+
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO reports (uploaded_by, original_filename, generated_excel, generated_pdf)
+            VALUES (%s,%s,%s,%s)
+        """, (session["user_id"], file.filename, report_excel_path, report_pdf_path))
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return render_template(
+            "analyst_dashboard.html",
+            dispositions=dispositions.to_dict(orient="records"),
+            disconnections=disconnections.to_dict(orient="records"),
+            aht=aht_table.to_dict(orient="records"),
+            trends=trends.to_dict(orient="records"),
+            total_calls=total_calls,
+            agent_names=agent_names,
+            agent_totals=agent_totals,
+            total_answered=total_answered,
+            total_dropped=total_dropped
+        )
+
+    except Exception as e:
+        # Show error in dashboard instead of 500
+        return render_template("analyst_dashboard.html", error=f"Upload failed: {str(e)}")
 
 # ---------------- SUPERVISOR DASHBOARD ---------------- #
 @app.route("/supervisor")
