@@ -5,26 +5,21 @@ from flask import Flask, render_template, request, redirect, session, send_file,
 from database import get_connection, create_tables
 from dotenv import load_dotenv
 import matplotlib
-matplotlib.use('Agg')  # Use non-GUI backend for server
+matplotlib.use('Agg')  # Non-GUI backend
 import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
-from datetime import datetime
 import random
 import string
-
 
 app = Flask(__name__)
 load_dotenv()
 
-# Secret key
 app.secret_key = os.getenv("SECRET_KEY") or "supersecretkey123"
 
-# Upload folder
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Initialize database tables
 create_tables()
 
 # ---------------- LOGIN ---------------- #
@@ -66,10 +61,8 @@ def logout():
 @app.route("/forgot_password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
-        # Step 1: User enters email
         if "new_password" not in request.form:
             email = request.form["email"]
-
             conn = get_connection()
             cur = conn.cursor()
             cur.execute("SELECT id FROM users WHERE email=%s", (email,))
@@ -80,30 +73,19 @@ def forgot_password():
             if not user:
                 return render_template("forgot_password.html", error="Email not found")
 
-            # Generate temporary password
             temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+            return render_template("forgot_password.html", step="set_new", email=email, temp_password=temp_password)
 
-            return render_template("forgot_password.html",
-                                   step="set_new",
-                                   email=email,
-                                   temp_password=temp_password)
-
-        # Step 2: User sets new password
         else:
             email = request.form["email"]
-            temp_password = request.form["temp_password"]
             new_password = request.form["new_password"]
             confirm_password = request.form["confirm_password"]
 
             if new_password != confirm_password:
-                return render_template("forgot_password.html",
-                                       step="set_new",
-                                       email=email,
-                                       temp_password=temp_password,
-                                       error="Passwords do not match")
+                return render_template("forgot_password.html", step="set_new", email=email,
+                                       temp_password=request.form["temp_password"], error="Passwords do not match")
 
             hashed_pw = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
-
             conn = get_connection()
             cur = conn.cursor()
             cur.execute("UPDATE users SET password=%s WHERE email=%s", (hashed_pw, email))
@@ -138,17 +120,13 @@ def upload():
         df = pd.read_excel(filepath)
         df.columns = df.columns.str.strip().str.lower()
 
-        # --- Column checks ---
         required_cols = ["wait", "duration", "workstream", "disconnection", "handled by", "date"]
         missing = [col for col in required_cols if col not in df.columns]
         if missing:
             return render_template("analyst_dashboard.html", error=f"Missing columns: {', '.join(missing)}")
 
-        # --- Calculations ---
         df["aht"] = df["wait"] + df["duration"]
-
         aht_table = df.groupby("handled by")["aht"].mean().reset_index()
-        # Convert Timedelta to minutes if needed
         if pd.api.types.is_timedelta64_dtype(aht_table["aht"]):
             aht_table["aht"] = aht_table["aht"].dt.total_seconds() / 60
 
@@ -166,7 +144,41 @@ def upload():
         agent_names = aht_table["handled by"].tolist()
         agent_totals = aht_table["aht"].round(2).tolist()
 
-        # --- Save report ---
+        # --- Graphs ---
+        plt.figure(figsize=(6,4))
+        plt.plot(trends["date"], trends["calls"], marker='o')
+        plt.title("Call Trends")
+        plt.xlabel("Date")
+        plt.ylabel("Number of Calls")
+        plt.tight_layout()
+        buf1 = BytesIO()
+        plt.savefig(buf1, format="png")
+        buf1.seek(0)
+        call_trends_graph = base64.b64encode(buf1.getvalue()).decode('utf-8')
+        plt.close()
+
+        plt.figure(figsize=(6,6))
+        plt.pie(dispositions["count"], labels=dispositions["workstream"], autopct='%1.1f%%')
+        plt.title("Dispositions")
+        buf2 = BytesIO()
+        plt.savefig(buf2, format="png")
+        buf2.seek(0)
+        dispositions_graph = base64.b64encode(buf2.getvalue()).decode('utf-8')
+        plt.close()
+
+        plt.figure(figsize=(6,4))
+        plt.bar(aht_table["handled by"], aht_table["aht"], color='skyblue')
+        plt.title("AHT Tracking (Minutes)")
+        plt.xlabel("Agent")
+        plt.ylabel("Average Handle Time")
+        plt.tight_layout()
+        buf3 = BytesIO()
+        plt.savefig(buf3, format="png")
+        buf3.seek(0)
+        aht_graph = base64.b64encode(buf3.getvalue()).decode('utf-8')
+        plt.close()
+
+        # Save Excel report
         report_excel_path = os.path.join(UPLOAD_FOLDER, f"report_{file.filename}")
         with pd.ExcelWriter(report_excel_path) as writer:
             dispositions.to_excel(writer, sheet_name="Dispositions", index=False)
@@ -196,19 +208,27 @@ def upload():
             agent_names=agent_names,
             agent_totals=agent_totals,
             total_answered=total_answered,
-            total_dropped=total_dropped
+            total_dropped=total_dropped,
+            call_trends_graph=call_trends_graph,
+            dispositions_graph=dispositions_graph,
+            aht_graph=aht_graph,
+            report_excel=report_excel_path,
+            report_pdf=report_pdf_path
         )
 
     except Exception as e:
-        # Show error in dashboard instead of 500
         return render_template("analyst_dashboard.html", error=f"Upload failed: {str(e)}")
+
+@app.route("/download_report")
+def download_report():
+    path = request.args.get("path")
+    return send_file(path, as_attachment=True)
 
 # ---------------- SUPERVISOR DASHBOARD ---------------- #
 @app.route("/supervisor")
 def supervisor_dashboard():
     if session.get("role") != "supervisor":
         return redirect("/")
-
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -220,29 +240,4 @@ def supervisor_dashboard():
     reports = cur.fetchall()
     cur.close()
     conn.close()
-
-    return render_template("supervisor_dashboard.html", reports=reports)
-
-@app.route("/create_analyst", methods=["POST"])
-def create_analyst():
-    if session.get("role") != "supervisor":
-        return redirect("/")
-
-    name = request.form["name"]
-    email = request.form["email"]
-    password = bcrypt.hashpw(request.form["password"].encode(), bcrypt.gensalt()).decode()
-
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO users (name,email,password,role)
-        VALUES (%s,%s,%s,'analyst')
-    """, (name,email,password))
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    return redirect("/supervisor")
-
-if __name__ == "__main__":
-    app.run(debug=True)
+    return render_template("
