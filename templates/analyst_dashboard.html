@@ -15,7 +15,6 @@ h1 {
     color: #333;
     margin: 20px 0;
 }
-/* Upload form styling */
 .upload-container {
     text-align: center;
     margin-bottom: 30px;
@@ -38,8 +37,6 @@ h1 {
 .upload-container button:hover {
     background: #0056b3;
 }
-
-/* Dashboard cards */
 .card {
     background: white;
     border-radius: 10px;
@@ -47,26 +44,15 @@ h1 {
     padding: 20px;
     margin: 20px auto;
     max-width: 900px;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 20px rgba(0,0,0,0.2);
 }
 .card h2 {
     margin-top: 0;
     color: #007BFF;
 }
-
-/* Tables */
 table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 20px;
-    background: #fff;
-    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
-    border-radius: 8px;
-    overflow: hidden;
 }
 th, td {
     padding: 12px;
@@ -76,31 +62,36 @@ th {
     background: #007BFF;
     color: white;
 }
-tr:nth-child(even) {
-    background: #f4f7f8;
-}
-tr:hover {
-    background: #e0f0ff;
-}
-/* Total row */
-.total-row {
-    font-weight: bold;
-    background: #ffd966;
-}
-
-/* Graph images */
+tr:nth-child(even) { background: #f4f7f8; }
+tr:hover { background: #e0f0ff; }
+.total-row { font-weight: bold; background: #ffd966; }
 .card img {
     max-width: 100%;
     height: auto;
     border-radius: 8px;
     margin-top: 10px;
 }
+.kpi-container {
+    display:flex; justify-content:space-around; margin:20px 0;
+}
+.kpi-card {
+    flex:1; margin:10px; padding:20px; border-radius:10px; text-align:center;
+    box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+.kpi-answered { background:#e8f5e9; color:#2e7d32; }
+.kpi-dropped { background:#ffebee; color:#c62828; }
+.download-links { text-align:center; margin-top:20px; }
+.download-links a {
+    margin:0 10px; padding:10px 20px; background:#007BFF; color:white;
+    border-radius:5px; text-decoration:none;
+}
+.download-links a:hover { background:#0056b3; }
+.error { color:red; text-align:center; font-weight:bold; }
 </style>
 </head>
 <body>
 <h1>Welcome {{ session.name }}</h1>
 
-<!-- ---------------- UPLOAD FORM ---------------- -->
 <div class="upload-container">
     <form action="/upload" method="post" enctype="multipart/form-data">
         <input type="file" name="file" accept=".xlsx,.xls" required>
@@ -108,52 +99,40 @@ tr:hover {
     </form>
 </div>
 
-<!-- ---------------- RESULTS ---------------- -->
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+
 {% if dispositions %}
 
-<!-- Call Trends Table -->
+<!-- Call Trends -->
 <div class="card">
     <h2>Call Trends (per day)</h2>
     <table>
-        <tr>
-            <th>Date</th>
-            <th>Number of Calls</th>
-        </tr>
+        <tr><th>Date</th><th>Number of Calls</th></tr>
         {% for row in trends %}
-        <tr>
-            <td>{{ row.date }}</td>
-            <td>{{ row.calls }}</td>
-        </tr>
+        <tr><td>{{ row.date }}</td><td>{{ row.calls }}</td></tr>
         {% endfor %}
-        <tr class="total-row">
-            <td>Total</td>
-            <td>{{ total_calls }}</td>
-        </tr>
+        <tr class="total-row"><td>Total</td><td>{{ total_calls }}</td></tr>
     </table>
-    {% if call_trends_chart %}
-    <img src="data:image/png;base64,{{ call_trends_chart }}" alt="Call Trends Chart">
+    {% if call_trends_graph %}
+    <img src="data:image/png;base64,{{ call_trends_graph }}" alt="Call Trends Graph">
     {% endif %}
 </div>
 
 <!-- AHT Tracking -->
 <div class="card">
-    <h2>AHT Tracking</h2>
+    <h2>AHT Tracking (Minutes)</h2>
     <table>
         <tr>
-            {% for col in aht[0].keys() %}
-            <th>{{ col }}</th>
-            {% endfor %}
+            {% for col in aht[0].keys() %}<th>{{ col }}</th>{% endfor %}
         </tr>
         {% for row in aht %}
-        <tr>
-            {% for val in row.values() %}
-            <td>{{ val }}</td>
-            {% endfor %}
-        </tr>
+        <tr>{% for val in row.values() %}<td>{{ val }}</td>{% endfor %}</tr>
         {% endfor %}
     </table>
-    {% if aht_chart %}
-    <img src="data:image/png;base64,{{ aht_chart }}" alt="AHT Chart">
+    {% if aht_graph %}
+    <img src="data:image/png;base64,{{ aht_graph }}" alt="AHT Chart">
     {% endif %}
 </div>
 
@@ -161,21 +140,13 @@ tr:hover {
 <div class="card">
     <h2>Dispositions</h2>
     <table>
-        <tr>
-            {% for col in dispositions[0].keys() %}
-            <th>{{ col }}</th>
-            {% endfor %}
-        </tr>
+        <tr>{% for col in dispositions[0].keys() %}<th>{{ col }}</th>{% endfor %}</tr>
         {% for row in dispositions %}
-        <tr>
-            {% for val in row.values() %}
-            <td>{{ val }}</td>
-            {% endfor %}
-        </tr>
+        <tr>{% for val in row.values() %}<td>{{ val }}</td>{% endfor %}</tr>
         {% endfor %}
     </table>
-    {% if dispositions_chart %}
-    <img src="data:image/png;base64,{{ dispositions_chart }}" alt="Dispositions Chart">
+    {% if dispositions_graph %}
+    <img src="data:image/png;base64,{{ dispositions_graph }}" alt="Dispositions Chart">
     {% endif %}
 </div>
 
@@ -183,24 +154,37 @@ tr:hover {
 <div class="card">
     <h2>Disconnections</h2>
     <table>
-        <tr>
-            {% for col in disconnections[0].keys() %}
-            <th>{{ col }}</th>
-            {% endfor %}
-        </tr>
+        <tr>{% for col in disconnections[0].keys() %}<th>{{ col }}</th>{% endfor %}</tr>
         {% for row in disconnections %}
-        <tr>
-            {% for val in row.values() %}
-            <td>{{ val }}</td>
-            {% endfor %}
-        </tr>
+        <tr>{% for val in row.values() %}<td>{{ val }}</td>{% endfor %}</tr>
         {% endfor %}
     </table>
-    {% if disconnections_chart %}
-    <img src="data:image/png;base64,{{ disconnections_chart }}" alt="Disconnections Chart">
+</div>
+
+<!-- Answered vs Dropped KPI -->
+<div class="card">
+    <h2>Answered vs Dropped</h2>
+    <div class="kpi-container">
+        <div class="kpi-card kpi-answered">
+            <h4>Answered</h4><p>{{ total_answered }}</p>
+        </div>
+        <div class="kpi-card kpi-dropped">
+            <h4>Dropped</h4><p>{{ total_dropped }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Download Links -->
+<div class="download-links">
+    {% if report_excel %}
+      <a href="{{ url_for('download_report', path=report_excel) }}">Download Excel Report</a>
+    {% endif %}
+    {% if report_pdf %}
+      <a href="{{ url_for('download_report', path=report_pdf) }}">Download PDF Report</a>
     {% endif %}
 </div>
-<!-- LOGOUT BUTTON -->
+
+<!-- Logout -->
 <div class="card" style="text-align:center;">
     <form action="/logout" method="get">
         <button type="submit" style="background:#dc3545;">Logout</button>
