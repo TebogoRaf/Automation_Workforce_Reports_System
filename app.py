@@ -198,23 +198,22 @@ def upload():
         cur.close()
         conn.close()
 
-        return render_template(
-            "analyst_dashboard.html",
-            dispositions=dispositions.to_dict(orient="records"),
-            disconnections=disconnections.to_dict(orient="records"),
-            aht=aht_table.to_dict(orient="records"),
-            trends=trends.to_dict(orient="records"),
-            total_calls=total_calls,
-            agent_names=agent_names,
-            agent_totals=agent_totals,
-            total_answered=total_answered,
-            total_dropped=total_dropped,
-            call_trends_graph=call_trends_graph,
-            dispositions_graph=dispositions_graph,
-            aht_graph=aht_graph,
-            report_excel=report_excel_path,
-            report_pdf=report_pdf_path
-        )
+        return render_template("analyst_dashboard.html",
+                       dispositions=dispositions.to_dict(orient="records"),
+                       disconnections=disconnections.to_dict(orient="records"),
+                       aht=aht_table.to_dict(orient="records"),
+                       trends=trends.to_dict(orient="records"),
+                       total_calls=total_calls,
+                       agent_names=agent_names,
+                       agent_totals=agent_totals,
+                       total_answered=total_answered,
+                       total_dropped=total_dropped,
+                       call_trends_graph=call_trends_graph,
+                       dispositions_graph=dispositions_graph,
+                       aht_graph=aht_graph,
+                       report_excel=report_excel_path,
+                       report_pdf=report_pdf_path)
+
 
     except Exception as e:
         return render_template("analyst_dashboard.html", error=f"Upload failed: {str(e)}")
